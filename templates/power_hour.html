@@ -75,4 +75,87 @@
 
     <div id="gaugeArea">
       <div class="gauge-block">
-        <div class="gauge-top">
+        <div class="gauge-top"><div class="gauge-label">Force Intensity</div>
+              <div class="gauge-value" id="forceValue">--<span class="sub">/100</span></div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-fill fill-amber" id="forceFill" style="width:0%"></div>
+              <div class="slider-thumb" id="forceThumb" style="left:0%"></div>
+            </div>
+            <div class="scale-labels">
+              <div>0</div><div class="mid">50</div><div class="end">100</div>
+            </div>
+          </div>
+
+          <div class="gauge-block">
+            <div class="gauge-top">
+              <div class="gauge-label">Directional Bias</div>
+              <div class="gauge-value" id="biasValue">--<span class="sub">/100</span></div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-fill fill-green" id="biasFill" style="width:50%"></div>
+              <div class="slider-thumb" id="biasThumb" style="left:50%"></div>
+            </div>
+            <div class="scale-labels">
+              <div>-100</div><div class="mid">0</div><div class="end">+100</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="last-updated" id="lastUpdated"></div>
+      </div>
+
+<script>
+function pad(n) { return n.toString().padStart(2, '0'); }
+
+function updateClock() {
+    const now = new Date();
+    const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const h = est.getHours(), m = est.getMinutes(), s = est.getSeconds();
+    document.getElementById('clock').textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+
+    const totalMin = h * 60 + m;
+    const startMin = 14 * 60 + 30;
+    const endMin = 16 * 60;
+    const banner = document.getElementById('statusBanner');
+    const gaugeArea = document.getElementById('gaugeArea');
+
+    if (totalMin >= startMin && totalMin < endMin) {
+        banner.textContent = 'LIVE — Power Hour Active';
+        banner.className = 'status-banner status-live';
+        gaugeArea.classList.remove('dimmed');
+    } else if (totalMin < startMin) {
+        banner.textContent = 'Waiting for Power Hour (2:30 PM EST)';
+        banner.className = 'status-banner status-waiting';
+        gaugeArea.classList.add('dimmed');
+    } else {
+        banner.textContent = 'Market Closed';
+        banner.className = 'status-banner status-closed';
+        gaugeArea.classList.add('dimmed');
+    }
+}
+
+async function fetchData() {
+    try {
+        const res = await fetch('/api/power-hour');
+        const data = await res.json();
+        document.getElementById('forceValue').innerHTML = data.force + '<span class="sub">/100</span>';
+        document.getElementById('biasValue').innerHTML = (data.bias > 0 ? '+' : '') + data.bias + '<span class="sub">/100</span>';
+        document.getElementById('forceFill').style.width = data.force + '%';
+        document.getElementById('forceThumb').style.left = data.force + '%';
+        const biasPct = ((data.bias + 100) / 200) * 100;
+        document.getElementById('biasFill').style.width = biasPct + '%';
+        document.getElementById('biasThumb').style.left = biasPct + '%';
+        document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    } catch (e) {
+        console.error('Fetch failed', e);
+    }
+}
+
+updateClock();
+setInterval(updateClock, 1000);
+fetchData();
+setInterval(fetchData, 15000);
+</script>
+</body>
+</html>
