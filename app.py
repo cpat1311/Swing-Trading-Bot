@@ -1265,7 +1265,61 @@ def api_trade_log():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+import requests as _uw_requests
+import os
+import time
 
+UW_API_KEY = os.environ.get("UW_API_KEY", "")
+BASELINE_PREMIUM = 5_000_000_000
+_power_hour_cache = {"data": None, "ts": 0}
+
+def _fetch_power_hour_data():
+    now = time.time()
+    if _power_hour_cache["data"] and (now - _power_hour_cache["ts"] < 15):
+        return _power_hour_cache["data"]
+
+    headers = {"Authorization": f"Bearer {UW_API_KEY}"}
+    try:
+        tide_resp = _uw_requests.get(
+            "https://api.unusualwhales.com/api/market/market-tide",
+            headers=headers, timeout=10
+        )
+        tide = tide_resp.json()
+
+        ticks_resp = _uw_requests.get(
+            "https://api.unusualwhales.com/api/stock/SPX/net-prem-ticks",
+            headers=headers, timeout=10
+        )
+        ticks = ticks_resp.json()
+
+        call_prem = sum(float(t.get("call_premium", 0)) for t in ticks.get("data", []))
+        put_prem = sum(float(t.get("put_premium", 0)) for t in ticks.get("data", []))
+        total_prem = call_prem + put_prem
+
+        force = min(100, round((total_prem / BASELINE_PREMIUM) * 100))
+        if total_prem > 0:
+            bias = round(((call_prem - put_prem) / total_prem) * 100)
+        else:
+            bias = 0
+        bias = max(-100, min(100, bias))
+
+        result = {"force": force, "bias": bias, "success": True}
+    except Exception as e:
+        result = {"force": 0, "bias": 0, "success": False, "error": str(e)}
+
+    _power_hour_cache["data"] = result
+    _power_hour_cache["ts"] = now
+    return result
+
+def register_power_hour_routes(app):
+    @app.route("/power-hour")
+    def power_hour_page():
+        return render_template("power_hour.html")
+
+    @app.route("/api/power-hour")
+    def power_hour_api():
+        return jsonify(_fetch_power_hour_data())
+register_power_hour_routes (app)
 if __name__ == "__main__":
     print("\n  SPX/NDX Trading Bot Dashboard")
     print("  Open in your browser: http://127.0.0.1:5050\n")
