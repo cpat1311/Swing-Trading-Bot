@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Power Hour Meter</title>
+<style>
+  :root {
+    --bg: #0a0d12; --panel: #12161d; --panel-border: #1f242e;
+    --text: #e8eaed; --text-dim: #8a919c; --cyan: #35d6d6;
+    --amber: #f5a623; --green: #2ecc71; --red: #e05252;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,sans-serif; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:16px; }
+  .back-link { color:var(--text-dim); text-decoration:none; font-size:15px; }
+  .brand { font-weight:800; font-size:18px; }
+  .card { margin:0 16px 16px; background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:20px; padding:22px 20px; }
+  h1.card-title { font-size:28px; font-weight:800; margin:0 0 6px; }
+  .card-desc { color:var(--text-dim); font-size:14px; margin:0 0 18px; }
+  .time-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .time-label { font-size:11px; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:4px; }
+  .time-value { font-size:24px; font-weight:700; color:var(--green); font-family:"SF Mono",Menlo,monospace; }
+  .status-banner { margin-bottom:16px; padding:12px 16px; border-radius:14px; font-size:13px;
+    font-weight:700; text-align:center; border:1px solid; }
+  .status-live { background:rgba(46,204,113,0.1); border-color:rgba(46,204,113,.35); color:var(--green); }
+  .status-waiting { background:rgba(245,166,35,0.08); border-color:rgba(245,166,35,.3); color:var(--amber); }
+  .status-closed { background:rgba(255,255,255,0.04); border-color:var(--panel-border); color:var(--text-dim); }
+  .status-error { background:rgba(224,82,82,0.1); border-color:rgba(224,82,82,.35); color:var(--red); }
+  .divider { border-top:1px solid var(--panel-border); margin:16px 0 20px; }
+  .gauge-block + .gauge-block { margin-top:24px; }
+  .gauge-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:12px; }
+  .gauge-label { font-size:15px; font-weight:700; }
+  .gauge-value { text-align:right; font-size:20px; font-weight:800; white-space:nowrap; }
+  .gauge-value .sub { display:block; font-size:14px; font-weight:700; }
+  .slider-track { position:relative; height:14px; border-radius:999px; background:rgba(255,255,255,.06); margin-bottom:8px; }
+  .slider-fill { position:absolute; left:0; top:0; height:100%; border-radius:999px; }
+  .fill-amber { background:linear-gradient(90deg,#d9430c,#f5a623); }
+  .fill-green { background:linear-gradient(90deg,#1a8f4a,#2ecc71); }
+  .fill-red { background:linear-gradient(90deg,#e05252,#b23a3a); }
+  .slider-thumb { position:absolute; top:50%; width:24px; height:24px; background:#fff; border-radius:50%;
+    box-shadow:0 2px 8px rgba(0,0,0,.5); transform:translate(-50%,-50%); }
+  .scale-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); font-weight:600; }
+  .scale-labels div { max-width:33%; }
+  .scale-labels .end { text-align:right; }
+  .scale-labels .mid { text-align:center; }
+  .dimmed { opacity:.35; filter:grayscale(.4); }
+  .last-updated { text-align:center; font-size:11px; color:var(--text-dim); margin-top:16px; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/" class="back-link">← Back</a>
+    <div class="brand">Power Hour Meter</div>
+    <div style="width:50px"></div>
+  </div>
+
+  <div class="card">
+    <h1 class="card-title">SPX Closing Force</h1>
+    <p class="card-desc">Live options premium flow &amp; directional bias (2:30 PM – 4:00 PM EST)</p>
+
+    <div class="time-row">
+      <div>
+        <div class="time-label">EST MARKET TIME</div>
+        <div class="time-value" id="clock">--:--:-- --</div>
+      </div>
+    </div>
+
+    <div class="status-banner status-waiting" id="statusBanner">LOADING…</div>
+
+    <div class="divider"></div>
+
+    <div id="gaugeArea">
+      <div class="gauge-block">
+        <div class="gauge-top">
